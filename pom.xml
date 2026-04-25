@@ -29,7 +29,7 @@
     <build>
         <plugins>
 
-            <!-- 1. Fat/uber JAR — shades all deps into a single launcher.jar -->
+            <!-- Fat/uber JAR — shades all deps into a single launcher.jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -62,37 +62,6 @@
                                     </excludes>
                                 </filter>
                             </filters>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!--
-                2. Copy launcher.jar → extracted-source/libraries/java/launcher.jar
-                   maven-shade-plugin always writes to target/ first; antrun copies
-                   it to the Electron launcher's expected location after packaging.
-
-                   REQUIRES: SalwyrrFix/ and extracted-source/ are sibling directories.
-            -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>deploy-to-electron-launcher</id>
-                        <phase>package</phase>
-                        <goals><goal>run</goal></goals>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${project.basedir}/../libraries/java"/>
-                                <copy file="${project.build.directory}/launcher.jar"
-                                      tofile="${project.basedir}/../libraries/java/SalwyrrFix.jar"
-                                      overwrite="true"/>
-                                <echo message=""/>
-                                <echo message="✓ SalwyrrFix.jar deployed to resources/libraries/java/"/>
-                                <echo message=""/>
-                            </target>
                         </configuration>
                     </execution>
                 </executions>
