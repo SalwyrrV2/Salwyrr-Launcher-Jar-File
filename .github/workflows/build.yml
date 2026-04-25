@@ -25,16 +25,22 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          set -euo pipefail
+          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
           COMMIT_HASH=$(git rev-parse --short HEAD)
           COMMIT_COUNT=$(git rev-list --count HEAD)
-          BUILD_NUMBER="build.$COMMIT_COUNT"
-          TAG="v$PROJECT_VERSION-$BUILD_NUMBER"
-          echo "project_version=$PROJECT_VERSION" >> $GITHUB_OUTPUT
-          echo "commit_hash=$COMMIT_HASH"         >> $GITHUB_OUTPUT
-          echo "commit_count=$COMMIT_COUNT"       >> $GITHUB_OUTPUT
-          echo "build_number=$BUILD_NUMBER"       >> $GITHUB_OUTPUT
-          echo "tag=$TAG"                         >> $GITHUB_OUTPUT
+          BUILD_NUMBER="build.${COMMIT_COUNT}"
+          TAG="v${PROJECT_VERSION}-${BUILD_NUMBER}"
+          echo "project_version=${PROJECT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "commit_hash=${COMMIT_HASH}"         >> "$GITHUB_OUTPUT"
+          echo "commit_count=${COMMIT_COUNT}"       >> "$GITHUB_OUTPUT"
+          echo "build_number=${BUILD_NUMBER}"       >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"                         >> "$GITHUB_OUTPUT"
+          echo "--- Resolved values ---"
+          echo "Version:  ${PROJECT_VERSION}"
+          echo "Hash:     ${COMMIT_HASH}"
+          echo "Build:    ${BUILD_NUMBER}"
+          echo "Tag:      ${TAG}"
 
       - name: Build
         run: mvn -B package --no-transfer-progress
@@ -47,13 +53,13 @@ jobs:
           body: |
             ## SalwyrrFix ${{ steps.version.outputs.project_version }}
 
-            | Field         | Value |
-            |---------------|-------|
-            | Version       | `${{ steps.version.outputs.project_version }}` |
-            | Build         | `${{ steps.version.outputs.build_number }}` |
-            | Commit        | `${{ steps.version.outputs.commit_hash }}` |
-            | Full SHA      | `${{ github.sha }}` |
-            | Branch        | `${{ github.ref_name }}` |
-            | Triggered by  | `${{ github.actor }}` |
+            | Field        | Value |
+            |--------------|-------|
+            | Version      | `${{ steps.version.outputs.project_version }}` |
+            | Build        | `${{ steps.version.outputs.build_number }}` |
+            | Commit       | `${{ steps.version.outputs.commit_hash }}` |
+            | Full SHA     | `${{ github.sha }}` |
+            | Branch       | `${{ github.ref_name }}` |
+            | Triggered by | `${{ github.actor }}` |
           files: target/launcher.jar
           make_latest: true
