@@ -1,0 +1,58 @@
+# SalwyrrFix 2.1 — Integration Guide
+
+## New Features in 2.1
+
+- **Multiple account types**: Offline, Microsoft (device-code OAuth), EasyMC token, TheAltening token
+- **Account manager**: Save up to 20 accounts, switch between them with one click
+- **Tabbed UI**: Play / Accounts / Mods / Settings — clean and organized
+- **Version picker**: Choose any MC version from the dropdown
+- **Mods tab**: List, enable/disable, delete mods; search & install from Modrinth in-app
+- **Direct server connect**: Enter a server IP and connect on launch
+- **Improved offline UUID**: Proper vanilla-compatible UUID generation
+- **G1GC JVM tuning** and Java auto-download (Mojang JRE)
+
+## Build & Deploy
+
+1. Ensure sibling folder layout:
+   ```
+   your-project/
+   ├── extracted-source/      ← Electron launcher
+   │   └── libraries/java/    ← launcher.jar lands here
+   └── SalwyrrFix/            ← this project
+   ```
+
+2. Build:
+   ```bash
+   cd SalwyrrFix
+   mvn package -q
+   ```
+   Maven shade-plugin + antrun copies `launcher.jar` into `../extracted-source/libraries/java/`.
+
+3. Run:
+   ```bash
+   cd extracted-source
+   npm install && npm start
+   ```
+
+## Data directory
+
+| OS      | Path                                    |
+|---------|-----------------------------------------|
+| Windows | `%APPDATA%\.Salwyrr`                    |
+| macOS   | `~/Library/Application Support/Salwyrr`|
+| Linux   | `~/.Salwyrr`                            |
+
+Key files:
+- `accounts.json` — saved account list
+- `.auth_cache.json` — Microsoft refresh token cache
+- `launcher.properties` — RAM and other prefs
+- `mods/` — drop .jar mods here; rename to .jar.disabled to disable
+
+## Auth modes
+
+| Mode         | Requires              | Online? |
+|--------------|-----------------------|---------|
+| Offline      | Username only         | No      |
+| Microsoft    | Browser + MS account  | Yes     |
+| EasyMC       | Free EasyMC token     | Yes     |
+| TheAltening  | Altening token        | Yes     |
