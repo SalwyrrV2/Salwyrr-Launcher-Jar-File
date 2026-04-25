@@ -18,6 +18,7 @@
     </properties>
 
     <dependencies>
+        <!-- JSON parsing (Mojang APIs, version manifests) -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
@@ -27,6 +28,8 @@
 
     <build>
         <plugins>
+
+            <!-- Fat/uber JAR — shades all deps into a single launcher.jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -63,6 +66,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 </project>

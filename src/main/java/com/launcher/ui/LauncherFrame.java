@@ -148,7 +148,7 @@ public class LauncherFrame extends JFrame {
             com.sun.management.OperatingSystemMXBean os =
                 (com.sun.management.OperatingSystemMXBean)
                     java.lang.management.ManagementFactory.getOperatingSystemMXBean();
-            totalMemMb = os.getTotalMemorySize() / 1024 / 1024;
+            totalMemMb = os.getTotalPhysicalMemorySize() / 1024 / 1024;
         } catch (Throwable ignored) {}
         int maxRam = (int) Math.max(1024, totalMemMb - 1024);
         int defRam = Math.min(4096, Math.max(2048, maxRam / 2));
