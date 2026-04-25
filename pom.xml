@@ -9,16 +9,15 @@
     <artifactId>SalwyrrFix</artifactId>
     <version>2.0.0</version>
     <packaging>jar</packaging>
-    <name>Salwyrr Launcher Backend</name>
+    <n>Salwyrr Launcher Backend</n>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
-        <!-- JSON parsing (Mojang APIs, version manifests) -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
@@ -28,8 +27,6 @@
 
     <build>
         <plugins>
-
-            <!-- Fat/uber JAR — shades all deps into a single launcher.jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -66,7 +63,6 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 </project>
