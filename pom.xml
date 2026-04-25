@@ -6,8 +6,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.launcher</groupId>
-    <artifactId>Salwyrr Launcher JAR</artifactId>
-    <version>2.0.0</version>
+    <artifactId>Salwyrr-Launcher-JAR</artifactId>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>Salwyrr Launcher Backend</name>
 
