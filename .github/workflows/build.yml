@@ -25,8 +25,7 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          set -euo pipefail
-          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
+          PROJECT_VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d '[:space:]')
           COMMIT_HASH=$(git rev-parse --short HEAD)
           COMMIT_COUNT=$(git rev-list --count HEAD)
           BUILD_NUMBER="build.${COMMIT_COUNT}"
@@ -36,11 +35,7 @@ jobs:
           echo "commit_count=${COMMIT_COUNT}"       >> "$GITHUB_OUTPUT"
           echo "build_number=${BUILD_NUMBER}"       >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}"                         >> "$GITHUB_OUTPUT"
-          echo "--- Resolved values ---"
-          echo "Version:  ${PROJECT_VERSION}"
-          echo "Hash:     ${COMMIT_HASH}"
-          echo "Build:    ${BUILD_NUMBER}"
-          echo "Tag:      ${TAG}"
+          echo "Version: ${PROJECT_VERSION} | Build: ${BUILD_NUMBER} | Commit: ${COMMIT_HASH}"
 
       - name: Build
         run: mvn -B package --no-transfer-progress
