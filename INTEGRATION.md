@@ -1,4 +1,4 @@
-# SalwyrrFix 2.1 — Integration Guide
+# Salwyrr Launcher JAR 2.1 — Integration Guide
 
 ## New Features in 2.1
 
@@ -18,12 +18,12 @@
    your-project/
    ├── extracted-source/      ← Electron launcher
    │   └── libraries/java/    ← launcher.jar lands here
-   └── SalwyrrFix/            ← this project
+   └── Salwyrr Launcher JAR/            ← this project
    ```
 
 2. Build:
    ```bash
-   cd SalwyrrFix
+   cd Salwyrr Launcher JAR
    mvn package -q
    ```
    Maven shade-plugin + antrun copies `launcher.jar` into `../extracted-source/libraries/java/`.

@@ -77,7 +77,7 @@ public class HttpUtil {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setConnectTimeout(CONNECT_TIMEOUT);
         conn.setReadTimeout(READ_TIMEOUT);
-        conn.setRequestProperty("User-Agent", "SalwyrrFix/1.0");
+        conn.setRequestProperty("User-Agent", "Salwyrr Launcher JAR/1.0");
         conn.connect();
         int code = conn.getResponseCode();
         if (code != 200)

@@ -1,4 +1,4 @@
-# SalwyrrFix
+# Salwyrr Launcher JAR
 
 > A Java backend that powers the Salwyrr Minecraft Launcher — handling authentication, game file downloads, mod management, and game launching inside the Electron shell.
 
@@ -21,7 +21,7 @@
 ## Project Structure
 
 ```
-SalwyrrFix/
+Salwyrr Launcher JAR/
 ├── src/main/java/com/launcher/
 │   ├── Main.java                  # Entry point; handles CLI args + headless mode
 │   ├── Constants.java             # Paths, URLs, launcher identity
@@ -48,7 +48,7 @@ SalwyrrFix/
 **Requirements:** Java 17+, Maven 3.8+
 
 ```bash
-# From the SalwyrrFix directory:
+# From the Salwyrr Launcher JAR directory:
 mvn package -q
 ```
 
@@ -60,7 +60,7 @@ Expected folder layout:
 your-project/
 ├── extracted-source/          ← Electron launcher source
 │   └── libraries/java/        ← launcher.jar lands here after build
-└── SalwyrrFix/                ← this repo
+└── Salwyrr Launcher JAR/                ← this repo
 ```
 
 ---

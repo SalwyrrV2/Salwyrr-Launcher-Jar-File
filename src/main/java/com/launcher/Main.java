@@ -58,7 +58,7 @@ public class Main {
                                      String token, String userType,
                                      int ram, String server) {
         // All output goes to stdout so Electron can capture and display it
-        java.util.function.Consumer<String> log = line -> System.out.println("[SalwyrrFix] " + line);
+        java.util.function.Consumer<String> log = line -> System.out.println("[Salwyrr Launcher JAR] " + line);
         java.util.function.Consumer<Integer> progress = pct -> System.out.println("[PROGRESS] " + pct);
 
         try {

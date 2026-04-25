@@ -29,10 +29,10 @@ jobs:
           COMMIT_COUNT=$(git rev-list --count HEAD)
           VERSION="1.${COMMIT_COUNT}"
           TAG="v${VERSION}+${COMMIT_HASH}"
-          echo "version=${VERSION}"       >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}"         >> "$GITHUB_OUTPUT"
           echo "commit_hash=${COMMIT_HASH}" >> "$GITHUB_OUTPUT"
           echo "commit_count=${COMMIT_COUNT}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}"               >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"                 >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: mvn -B package --no-transfer-progress
@@ -43,7 +43,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: "v${{ steps.version.outputs.version }} (${{ steps.version.outputs.commit_hash }})"
           body: |
-            ## SalwyrrFix v${{ steps.version.outputs.version }}
+            ## Salwyrr Launcher JAR v${{ steps.version.outputs.version }}
 
             | Field        | Value |
             |--------------|-------|
@@ -53,5 +53,15 @@ jobs:
             | Full SHA     | `${{ github.sha }}` |
             | Branch       | `${{ github.ref_name }}` |
             | Triggered by | `${{ github.actor }}` |
+
+            ## Installation
+
+            1. Download `launcher.jar` from the Assets below
+            2. Navigate to your Salwyrr Launcher installation folder
+            3. Drop `launcher.jar` into:
+            ```
+            resources/libraries/java/
+            ```
+            4. Restart the Salwyrr Launcher
           files: target/launcher.jar
           make_latest: true
