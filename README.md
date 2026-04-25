@@ -127,8 +127,6 @@ Key files:
 |-------------|---------------------------|---------|
 | Offline     | Username only             | No      |
 | Microsoft   | Browser + Microsoft account | Yes   |
-| EasyMC      | Free EasyMC token         | Yes     |
-| TheAltening | Altening token            | Yes     |
 
 ---
 
