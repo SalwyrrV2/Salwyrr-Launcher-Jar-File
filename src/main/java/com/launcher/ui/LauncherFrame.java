@@ -6,6 +6,8 @@ import com.launcher.auth.AuthManager;
 import com.launcher.auth.AuthManager.AuthResult;
 import com.launcher.download.MinecraftDownloader;
 import com.launcher.launch.GameLauncher;
+import com.launcher.install.ModLoaderInstaller;
+import com.launcher.install.ModLoaderInstaller.Loader;
 import com.launcher.mods.ModManager;
 import com.launcher.mods.ModManager.ModInfo;
 import com.launcher.mods.ModManager.ModrinthResult;
@@ -56,6 +58,9 @@ public class LauncherFrame extends JFrame {
 
     // ── Play tab ──────────────────────────────────────────────────────────────
     private final JComboBox<String> versionCombo;
+    private final JComboBox<String> loaderCombo;
+    private final JButton      installLoaderBtn;
+    private final JLabel       loaderStatusLabel;
     private final JSlider      ramSlider;
     private final JLabel       ramLabel;
     private final JButton      downloadBtn;
@@ -140,8 +145,26 @@ public class LauncherFrame extends JFrame {
         versionCombo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         versionCombo.addActionListener(e -> {
             String v = (String) versionCombo.getSelectedItem();
-            if (v != null) Constants.MINECRAFT_VERSION = v;
+            if (v != null) {
+                Constants.MINECRAFT_VERSION = v;
+                refreshLoaderStatus();
+            }
         });
+
+        // ── Loader selector ───────────────────────────────────────────────────
+        loaderCombo = new JComboBox<>(new String[]{
+            "None (Vanilla)", "Fabric", "Forge", "NeoForge", "OptiFine"
+        });
+        loaderCombo.setBackground(C_CARD);
+        loaderCombo.setForeground(C_TEXT);
+        loaderCombo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        // Sync combo to saved loader for current version
+        syncLoaderCombo();
+
+        installLoaderBtn = smallBtn("Install / Update", C_TEAL);
+        installLoaderBtn.addActionListener(e -> installSelectedLoader());
+
+        loaderStatusLabel = lbl("", C_MUTED, Font.ITALIC, 11);
 
         long totalMemMb = 4096;
         try {
@@ -254,8 +277,22 @@ public class LauncherFrame extends JFrame {
         g.gridx = 1; g.fill = GridBagConstraints.HORIZONTAL; g.weightx = 1;
         p.add(serverField, g);
 
+        // Loader row
+        g.gridy = 3; g.gridx = 0; g.fill = GridBagConstraints.NONE; g.weightx = 0;
+        p.add(lbl("Mod Loader:", C_MUTED, Font.PLAIN, 12), g);
+        g.gridx = 1; g.fill = GridBagConstraints.HORIZONTAL; g.weightx = 1;
+        JPanel loaderRow = panel(C_SURFACE);
+        loaderRow.setLayout(new BorderLayout(6, 0));
+        loaderRow.add(loaderCombo, BorderLayout.CENTER);
+        loaderRow.add(installLoaderBtn, BorderLayout.EAST);
+        p.add(loaderRow, g);
+        g.gridx = 0; g.gridwidth = 3; g.fill = GridBagConstraints.HORIZONTAL;
+        g.gridy = 4;
+        p.add(loaderStatusLabel, g);
+        refreshLoaderStatus();
+
         // Auth status
-        g.gridy = 3; g.gridx = 0; g.gridwidth = 3;
+        g.gridy = 5; g.gridx = 0; g.gridwidth = 3;
         g.fill = GridBagConstraints.HORIZONTAL;
         JPanel authBar = panel(C_CARD);
         authBar.setBorder(BorderFactory.createCompoundBorder(
@@ -273,7 +310,7 @@ public class LauncherFrame extends JFrame {
         p.add(authBar, g);
 
         // Buttons
-        g.gridy = 4; g.gridx = 0; g.gridwidth = 3;
+        g.gridy = 6; g.gridx = 0; g.gridwidth = 3;
         JPanel btnRow = panel(C_SURFACE);
         btnRow.setLayout(new FlowLayout(FlowLayout.CENTER, 12, 8));
         btnRow.add(downloadBtn);
@@ -709,6 +746,101 @@ public class LauncherFrame extends JFrame {
     //  DOWNLOAD & LAUNCH
     // ═════════════════════════════════════════════════════════════════════════
 
+    // ═════════════════════════════════════════════════════════════════════════
+    //  MOD LOADER INSTALL
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void syncLoaderCombo() {
+        Loader current = ModLoaderInstaller.getSelectedLoader();
+        switch (current) {
+            case FABRIC:   loaderCombo.setSelectedIndex(1); break;
+            case FORGE:    loaderCombo.setSelectedIndex(2); break;
+            case NEOFORGE: loaderCombo.setSelectedIndex(3); break;
+            case OPTIFINE: loaderCombo.setSelectedIndex(4); break;
+            default:       loaderCombo.setSelectedIndex(0); break;
+        }
+    }
+
+    private void refreshLoaderStatus() {
+        Loader installed = ModLoaderInstaller.getSelectedLoader();
+        boolean hasJson  = ModLoaderInstaller.getLoaderVersionJson() != null;
+        if (installed == Loader.NONE || !hasJson) {
+            loaderStatusLabel.setText("  No mod loader installed — click Install to add one.");
+            loaderStatusLabel.setForeground(C_MUTED);
+        } else {
+            loaderStatusLabel.setText("  ✓ " + installed.name().charAt(0)
+                + installed.name().substring(1).toLowerCase()
+                + " installed for MC " + Constants.MINECRAFT_VERSION);
+            loaderStatusLabel.setForeground(C_GREEN);
+        }
+        syncLoaderCombo();
+    }
+
+    private void installSelectedLoader() {
+        int idx = loaderCombo.getSelectedIndex();
+        Loader loader;
+        switch (idx) {
+            case 1: loader = Loader.FABRIC;   break;
+            case 2: loader = Loader.FORGE;    break;
+            case 3: loader = Loader.NEOFORGE; break;
+            case 4: loader = Loader.OPTIFINE; break;
+            default: loader = Loader.NONE;    break;
+        }
+
+        if (loader == Loader.NONE) {
+            try {
+                ModLoaderInstaller.install(Loader.NONE, msg -> log(msg));
+                refreshLoaderStatus();
+            } catch (Exception ex) {
+                log("✗ " + ex.getMessage());
+            }
+            return;
+        }
+
+        if (!Files.exists(Constants.clientJar())) {
+            JOptionPane.showMessageDialog(this,
+                "Download Minecraft first before installing a mod loader.",
+                "Not Downloaded", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        setButtons(false);
+        installLoaderBtn.setEnabled(false);
+        progressBar.setValue(0);
+        progressBar.setString("Installing " + loader.name() + "...");
+        progressBar.setForeground(C_TEAL);
+        log("");
+        log("═══ Installing " + loader.name() + " for MC " + Constants.MINECRAFT_VERSION + " ═══");
+
+        final Loader finalLoader = loader;
+        new Thread(() -> {
+            try {
+                ModLoaderInstaller.install(finalLoader,
+                    msg -> SwingUtilities.invokeLater(() -> log(msg)));
+                SwingUtilities.invokeLater(() -> {
+                    log("═══ " + finalLoader.name() + " installation complete! ═══");
+                    progressBar.setString("Loader Ready");
+                    progressBar.setForeground(C_GREEN);
+                    refreshLoaderStatus();
+                    refreshModList();
+                });
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> {
+                    log("✗ Loader install failed: " + ex.getMessage());
+                    progressBar.setString("Error");
+                    progressBar.setForeground(C_RED);
+                    JOptionPane.showMessageDialog(this, ex.getMessage(),
+                        "Loader Install Error", JOptionPane.ERROR_MESSAGE);
+                });
+            } finally {
+                SwingUtilities.invokeLater(() -> {
+                    setButtons(true);
+                    installLoaderBtn.setEnabled(true);
+                });
+            }
+        }, "LoaderInstaller").start();
+    }
+
     private void startDownload() {
         setButtons(false);
         progressBar.setValue(0);
@@ -850,6 +982,7 @@ public class LauncherFrame extends JFrame {
     private void setButtons(boolean enabled) {
         downloadBtn.setEnabled(enabled);
         playBtn.setEnabled(enabled);
+        installLoaderBtn.setEnabled(enabled);
     }
 
     // Prefs

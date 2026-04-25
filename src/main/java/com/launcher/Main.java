@@ -4,10 +4,6 @@ import com.launcher.auth.AuthManager;
 import com.launcher.auth.AuthManager.AuthResult;
 import com.launcher.download.MinecraftDownloader;
 import com.launcher.launch.GameLauncher;
-import com.launcher.ui.LauncherFrame;
-
-import javax.swing.*;
-import java.nio.file.Files;
 
 public class Main {
 
@@ -46,10 +42,9 @@ public class Main {
             return;
         }
 
-        // Otherwise open the standalone GUI (user ran the jar directly)
-        if (version == null) Constants.MINECRAFT_VERSION = "1.20.1";
-        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignored) {}
-        SwingUtilities.invokeLater(() -> new LauncherFrame().setVisible(true));
+        // Headless flag is required; refuse to start without it
+        System.err.println("[ERROR] --headless and --username are required.");
+        System.exit(1);
     }
 
     // ── Headless mode — used by the Electron launcher ─────────────────────────

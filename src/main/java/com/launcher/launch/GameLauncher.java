@@ -3,6 +3,7 @@ package com.launcher.launch;
 import com.launcher.Constants;
 import com.launcher.auth.AuthManager.AuthResult;
 import com.launcher.download.MinecraftDownloader;
+import com.launcher.install.ModLoaderInstaller;
 import com.launcher.mods.ModManager;
 import com.launcher.util.JavaManager;
 import org.json.JSONArray;
@@ -37,6 +38,14 @@ public class GameLauncher {
 
         JSONObject versionData = new JSONObject(readFile(versionJsonPath));
 
+        // ── Merge loader JSON on top of vanilla version data ──────────────────
+        Path loaderJson = ModLoaderInstaller.getLoaderVersionJson();
+        if (loaderJson != null) {
+            log.accept("Loader JSON : " + loaderJson.getFileName());
+            JSONObject loaderData = new JSONObject(readFile(loaderJson));
+            versionData = mergeLoaderData(versionData, loaderData);
+        }
+
         String       javaExe   = JavaManager.resolveJava(Constants.MINECRAFT_VERSION, log);
         List<Path>   classpath = buildClasspath(versionData);
         List<String> jvmArgs   = buildJvmArgs(versionData, ramMb, auth, javaExe);
@@ -70,6 +79,62 @@ public class GameLauncher {
         pb.directory(gameDir.toFile());
         pb.redirectErrorStream(true);
         return pb.start();
+    }
+
+    // ── Loader merge ──────────────────────────────────────────────────────────
+
+    /**
+     * Merges the loader's version JSON on top of the vanilla version data:
+     *  - mainClass is replaced by the loader's if present
+     *  - libraries arrays are combined (loader's come first for priority)
+     *  - arguments.game and arguments.jvm are appended
+     *  - minecraftArguments (legacy) is appended
+     */
+    private JSONObject mergeLoaderData(JSONObject vanilla, JSONObject loader) {
+        JSONObject merged = new JSONObject(vanilla.toString()); // deep copy
+
+        // Override mainClass
+        String loaderMain = loader.optString("mainClass", null);
+        if (loaderMain != null && !loaderMain.isEmpty())
+            merged.put("mainClass", loaderMain);
+
+        // Merge libraries (loader's first so they take classpath priority)
+        JSONArray vanillaLibs = merged.optJSONArray("libraries");
+        JSONArray loaderLibs  = loader.optJSONArray("libraries");
+        if (loaderLibs != null) {
+            JSONArray combined = new JSONArray();
+            for (int i = 0; i < loaderLibs.length(); i++)  combined.put(loaderLibs.get(i));
+            if (vanillaLibs != null)
+                for (int i = 0; i < vanillaLibs.length(); i++) combined.put(vanillaLibs.get(i));
+            merged.put("libraries", combined);
+        }
+
+        // Merge arguments (modern format)
+        JSONObject loaderArgs = loader.optJSONObject("arguments");
+        if (loaderArgs != null) {
+            JSONObject mergedArgs = merged.optJSONObject("arguments");
+            if (mergedArgs == null) { mergedArgs = new JSONObject(); merged.put("arguments", mergedArgs); }
+            appendArgs(mergedArgs, loaderArgs, "game");
+            appendArgs(mergedArgs, loaderArgs, "jvm");
+        }
+
+        // Merge legacy minecraftArguments
+        String loaderLegacy = loader.optString("minecraftArguments", null);
+        if (loaderLegacy != null && !loaderLegacy.isEmpty()) {
+            String existingLegacy = merged.optString("minecraftArguments", "");
+            merged.put("minecraftArguments",
+                (existingLegacy.isEmpty() ? loaderLegacy : existingLegacy + " " + loaderLegacy));
+        }
+
+        return merged;
+    }
+
+    private void appendArgs(JSONObject target, JSONObject source, String key) {
+        JSONArray srcArr = source.optJSONArray(key);
+        if (srcArr == null) return;
+        JSONArray tgtArr = target.optJSONArray(key);
+        if (tgtArr == null) { tgtArr = new JSONArray(); target.put(key, tgtArr); }
+        for (int i = 0; i < srcArr.length(); i++) tgtArr.put(srcArr.get(i));
     }
 
     // ── Classpath ─────────────────────────────────────────────────────────────
