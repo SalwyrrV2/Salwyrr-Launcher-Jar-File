@@ -25,17 +25,14 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          PROJECT_VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d '[:space:]')
           COMMIT_HASH=$(git rev-parse --short HEAD)
           COMMIT_COUNT=$(git rev-list --count HEAD)
-          BUILD_NUMBER="build.${COMMIT_COUNT}"
-          TAG="v${PROJECT_VERSION}-${BUILD_NUMBER}"
-          echo "project_version=${PROJECT_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "commit_hash=${COMMIT_HASH}"         >> "$GITHUB_OUTPUT"
-          echo "commit_count=${COMMIT_COUNT}"       >> "$GITHUB_OUTPUT"
-          echo "build_number=${BUILD_NUMBER}"       >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}"                         >> "$GITHUB_OUTPUT"
-          echo "Version: ${PROJECT_VERSION} | Build: ${BUILD_NUMBER} | Commit: ${COMMIT_HASH}"
+          VERSION="1.${COMMIT_COUNT}"
+          TAG="v${VERSION}+${COMMIT_HASH}"
+          echo "version=${VERSION}"       >> "$GITHUB_OUTPUT"
+          echo "commit_hash=${COMMIT_HASH}" >> "$GITHUB_OUTPUT"
+          echo "commit_count=${COMMIT_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}"               >> "$GITHUB_OUTPUT"
 
       - name: Build
         run: mvn -B package --no-transfer-progress
@@ -44,14 +41,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: "v${{ steps.version.outputs.project_version }} (${{ steps.version.outputs.build_number }})"
+          name: "v${{ steps.version.outputs.version }} (${{ steps.version.outputs.commit_hash }})"
           body: |
-            ## SalwyrrFix ${{ steps.version.outputs.project_version }}
+            ## SalwyrrFix v${{ steps.version.outputs.version }}
 
             | Field        | Value |
             |--------------|-------|
-            | Version      | `${{ steps.version.outputs.project_version }}` |
-            | Build        | `${{ steps.version.outputs.build_number }}` |
+            | Version      | `${{ steps.version.outputs.version }}` |
+            | Build        | `${{ steps.version.outputs.commit_count }}` |
             | Commit       | `${{ steps.version.outputs.commit_hash }}` |
             | Full SHA     | `${{ github.sha }}` |
             | Branch       | `${{ github.ref_name }}` |
