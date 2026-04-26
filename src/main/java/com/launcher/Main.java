@@ -5,7 +5,7 @@ import com.launcher.auth.AuthManager.AuthResult;
 import com.launcher.download.MinecraftDownloader;
 import com.launcher.install.ModLoaderInstaller;
 import com.launcher.install.ModLoaderInstaller.Loader;
-import com.launcher.launch.GameLauncher;
+import com.launcher.mods.ModManager;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -72,6 +72,7 @@ public class Main {
         String  listLoaders    = null;  // --list-loaders   <loader>
         boolean getLoader      = false; // --get-loader
         String  loaderVersion  = null;  // --loader-version  <version>
+        String  installMod     = null;  // --install-mod <modrinthProjectId>
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -86,6 +87,7 @@ public class Main {
                 case "--loader-version": if (i + 1 < args.length) loaderVersion = args[++i]; break;
                 case "--get-loader":     getLoader = true; break;
                 case "--headless":       headless  = true; break;
+                case "--install-mod":    if (i + 1 < args.length) installMod = args[++i]; break;
                 case "--ram":
                     if (i + 1 < args.length) {
                         try { ram = Integer.parseInt(args[++i]); } catch (Exception ignored) {}
@@ -117,6 +119,12 @@ public class Main {
         // 3. Install / remove a mod loader
         if (installLoader != null && !installLoader.isEmpty()) {
             runInstallLoader(installLoader, loaderVersion);
+            return;
+        }
+
+        // 3b. Install a mod from Modrinth by project ID
+        if (installMod != null && !installMod.isEmpty()) {
+            runInstallMod(installMod);
             return;
         }
 
@@ -153,6 +161,18 @@ public class Main {
         } catch (Exception e) {
             System.err.println("[ERROR] " + e.getMessage());
             e.printStackTrace();
+            System.exit(1);
+        }
+    }
+
+    // ── --install-mod ─────────────────────────────────────────────────────────
+
+    private static void runInstallMod(String projectId) {
+        Consumer<String> log = line -> System.out.println("[Salwyrr Launcher JAR] " + line);
+        try {
+            ModManager.downloadFromModrinth(projectId, Constants.MINECRAFT_VERSION, log);
+        } catch (Exception e) {
+            System.err.println("[ERROR] " + e.getMessage());
             System.exit(1);
         }
     }

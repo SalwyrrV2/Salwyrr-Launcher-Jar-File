@@ -13,6 +13,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import java.util.LinkedHashSet;
 import java.util.function.Consumer;
 
 public class GameLauncher {
@@ -144,6 +145,8 @@ public class GameLauncher {
             public void accept(Integer d) {}
         });
         List<Path> cp = new ArrayList<Path>();
+        // Track group:artifact to deduplicate — first entry wins (loader libs come first after merge)
+        Set<String> seen = new LinkedHashSet<String>();
 
         JSONArray libraries = versionData.getJSONArray("libraries");
         for (int i = 0; i < libraries.length(); i++) {
@@ -157,6 +160,8 @@ public class GameLauncher {
                 if (artifact == null) continue;
                 String libPath = artifact.optString("path", null);
                 if (libPath == null) continue;
+                String gaKey = mavenPathToGA(libPath);
+                if (gaKey != null && !seen.add(gaKey)) continue; // duplicate
                 Path jar = Constants.LIBRARIES_DIR.resolve(libPath.replace("/", File.separator));
                 if (Files.exists(jar)) cp.add(jar);
             } else {
@@ -164,12 +169,40 @@ public class GameLauncher {
                 // Derive the jar path from the Maven coordinates
                 String name = lib.optString("name", null);
                 if (name == null || name.isEmpty()) continue;
+                String gaKey = mavenCoordToGA(name);
+                if (gaKey != null && !seen.add(gaKey)) continue; // duplicate
                 Path jar = mavenCoordToPath(name);
                 if (jar != null && Files.exists(jar)) cp.add(jar);
             }
         }
         cp.add(Constants.clientJar());
         return cp;
+    }
+
+    /** Extracts "group/artifact" key from a Maven repo path like "org/ow2/asm/asm/9.9/asm-9.9.jar" */
+    private String mavenPathToGA(String path) {
+        try {
+            // path = group/parts.../artifact/version/artifact-version.jar
+            // split on / and take all but last two segments (version dir + jar file)
+            String[] parts = path.split("/");
+            if (parts.length < 3) return null;
+            // group = parts[0..n-3], artifact = parts[n-2]
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < parts.length - 2; i++) {
+                if (i > 0) sb.append('/');
+                sb.append(parts[i]);
+            }
+            return sb.toString();
+        } catch (Exception e) { return null; }
+    }
+
+    /** Extracts "group:artifact" from a Maven coordinate "group:artifact:version[:classifier]" */
+    private String mavenCoordToGA(String name) {
+        try {
+            String[] parts = name.split(":");
+            if (parts.length < 2) return null;
+            return parts[0] + ":" + parts[1];
+        } catch (Exception e) { return null; }
     }
 
     /**
