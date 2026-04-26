@@ -149,17 +149,49 @@ public class GameLauncher {
         for (int i = 0; i < libraries.length(); i++) {
             JSONObject lib = libraries.getJSONObject(i);
             if (!helper.rulesAllow(lib)) continue;
+
             JSONObject downloads = lib.optJSONObject("downloads");
-            if (downloads == null) continue;
-            JSONObject artifact = downloads.optJSONObject("artifact");
-            if (artifact == null) continue;
-            String path = artifact.optString("path", null);
-            if (path == null) continue;
-            Path jar = Constants.LIBRARIES_DIR.resolve(path.replace("/", File.separator));
-            if (Files.exists(jar)) cp.add(jar);
+            if (downloads != null) {
+                // Standard Mojang / Forge format: downloads.artifact.path
+                JSONObject artifact = downloads.optJSONObject("artifact");
+                if (artifact == null) continue;
+                String libPath = artifact.optString("path", null);
+                if (libPath == null) continue;
+                Path jar = Constants.LIBRARIES_DIR.resolve(libPath.replace("/", File.separator));
+                if (Files.exists(jar)) cp.add(jar);
+            } else {
+                // Fabric / Quilt format: { "name": "group:artifact:version", "url": "..." }
+                // Derive the jar path from the Maven coordinates
+                String name = lib.optString("name", null);
+                if (name == null || name.isEmpty()) continue;
+                Path jar = mavenCoordToPath(name);
+                if (jar != null && Files.exists(jar)) cp.add(jar);
+            }
         }
         cp.add(Constants.clientJar());
         return cp;
+    }
+
+    /**
+     * Converts a Maven coordinate (group:artifact:version[:classifier]) to the
+     * expected path under LIBRARIES_DIR, using the standard Maven layout.
+     * e.g. "net.fabricmc:fabric-loader:0.16.5" →
+     *      libraries/net/fabricmc/fabric-loader/0.16.5/fabric-loader-0.16.5.jar
+     */
+    private Path mavenCoordToPath(String name) {
+        try {
+            String[] parts = name.split(":");
+            if (parts.length < 3) return null;
+            String group      = parts[0].replace('.', '/');
+            String artifact   = parts[1];
+            String version    = parts[2];
+            String classifier = parts.length > 3 ? "-" + parts[3] : "";
+            String jarName    = artifact + "-" + version + classifier + ".jar";
+            String path       = group + "/" + artifact + "/" + version + "/" + jarName;
+            return Constants.LIBRARIES_DIR.resolve(path.replace("/", File.separator));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String classpathString(List<Path> cp) {

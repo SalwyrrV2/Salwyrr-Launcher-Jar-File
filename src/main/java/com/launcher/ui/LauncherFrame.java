@@ -155,10 +155,11 @@ public class LauncherFrame extends JFrame {
         loaderCombo = new JComboBox<>(new String[]{
             "None (Vanilla)", "Fabric", "Forge", "NeoForge", "OptiFine"
         });
+        loaderCombo.setSelectedItem("Fabric"); // Fabric is the default
         loaderCombo.setBackground(C_CARD);
         loaderCombo.setForeground(C_TEXT);
         loaderCombo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        // Sync combo to saved loader for current version
+        // Sync combo to saved loader for current version (overrides default if already set)
         syncLoaderCombo();
 
         installLoaderBtn = smallBtn("Install / Update", C_TEAL);
@@ -765,12 +766,30 @@ public class LauncherFrame extends JFrame {
         Loader installed = ModLoaderInstaller.getSelectedLoader();
         boolean hasJson  = ModLoaderInstaller.getLoaderVersionJson() != null;
         if (installed == Loader.NONE || !hasJson) {
-            loaderStatusLabel.setText("  No mod loader installed — click Install to add one.");
+            loaderStatusLabel.setText("  No mod loader installed — click Install to add Fabric.");
             loaderStatusLabel.setForeground(C_MUTED);
         } else {
-            loaderStatusLabel.setText("  ✓ " + installed.name().charAt(0)
-                + installed.name().substring(1).toLowerCase()
-                + " installed for MC " + Constants.MINECRAFT_VERSION);
+            String loaderName = installed.name().charAt(0)
+                + installed.name().substring(1).toLowerCase();
+            // Try to extract the Fabric loader version from the profile JSON
+            String versionSuffix = "";
+            if (installed == Loader.FABRIC) {
+                try {
+                    Path loaderJson = ModLoaderInstaller.getLoaderVersionJson();
+                    if (loaderJson != null) {
+                        String content = new String(java.nio.file.Files.readAllBytes(loaderJson),
+                            java.nio.charset.StandardCharsets.UTF_8);
+                        org.json.JSONObject data = new org.json.JSONObject(content);
+                        String id = data.optString("id", "");
+                        // id format: "fabric-loader-X.Y.Z-mcVersion"
+                        java.util.regex.Matcher m = java.util.regex.Pattern
+                            .compile("fabric-loader-([\\d.]+)").matcher(id);
+                        if (m.find()) versionSuffix = " " + m.group(1);
+                    }
+                } catch (Exception ignored) {}
+            }
+            loaderStatusLabel.setText("  ✓ " + loaderName + versionSuffix
+                + " chosen for Minecraft " + Constants.MINECRAFT_VERSION);
             loaderStatusLabel.setForeground(C_GREEN);
         }
         syncLoaderCombo();

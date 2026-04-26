@@ -100,7 +100,7 @@ public class ModManager {
                                                        String mcVersion) throws Exception {
         String encoded = java.net.URLEncoder.encode(query, "UTF-8");
         String facets  = java.net.URLEncoder.encode(
-            "[[\"project_type:mod\"],[\"versions:" + mcVersion + "\"]]", "UTF-8");
+            "[[\"project_type:mod\"],[\"versions:" + mcVersion + "\"],[\"categories:fabric\"]]", "UTF-8");
         String url = MODRINTH_API + "/search?query=" + encoded
                      + "&facets=" + facets + "&limit=20";
 
@@ -123,13 +123,39 @@ public class ModManager {
     public static void downloadFromModrinth(String projectId, String mcVersion,
                                              Consumer<String> log) throws Exception {
         String url = MODRINTH_API + "/project/" + projectId + "/version"
+                     + "?game_versions=%5B%22" + mcVersion + "%22%5D"
+                     + "&loaders=%5B%22fabric%22%5D";
+        JSONArray versions;
+        try {
+            versions = new JSONArray(HttpUtil.fetchString(url));
+        } catch (Exception e) {
+            // Fallback: no loader filter
+            url = MODRINTH_API + "/project/" + projectId + "/version"
                      + "?game_versions=%5B%22" + mcVersion + "%22%5D";
-        JSONArray versions = new JSONArray(HttpUtil.fetchString(url));
+            versions = new JSONArray(HttpUtil.fetchString(url));
+        }
         if (versions.isEmpty())
-            throw new IOException("No compatible version found for MC " + mcVersion);
+            throw new IOException("No compatible Fabric version found for MC " + mcVersion
+                + ".\nMake sure this mod supports Fabric on MC " + mcVersion + ".");
 
-        JSONObject ver   = versions.getJSONObject(0);
-        JSONArray  files = ver.getJSONArray("files");
+        // Prefer the first Fabric version; fall back to any compatible version
+        JSONObject chosenVer = null;
+        for (int i = 0; i < versions.length(); i++) {
+            JSONObject ver = versions.getJSONObject(i);
+            JSONArray loaders = ver.optJSONArray("loaders");
+            if (loaders != null) {
+                for (int j = 0; j < loaders.length(); j++) {
+                    if ("fabric".equalsIgnoreCase(loaders.getString(j))) {
+                        chosenVer = ver;
+                        break;
+                    }
+                }
+            }
+            if (chosenVer != null) break;
+        }
+        if (chosenVer == null) chosenVer = versions.getJSONObject(0);
+
+        JSONArray  files = chosenVer.getJSONArray("files");
 
         JSONObject primary = null;
         for (int i = 0; i < files.length(); i++) {
@@ -146,22 +172,52 @@ public class ModManager {
 
         Files.createDirectories(Constants.modsDir());
         Path dest = Constants.modsDir().resolve(fileName);
-        log.accept("[Mods] Downloading " + fileName + " …");
+        log.accept("[Mods] Downloading Fabric mod: " + fileName + " …");
         HttpUtil.downloadFile(fileUrl, dest, sha1, (done, total) -> {
             if (total > 0 && done * 5 / total > (done - 1) * 5 / total)
                 log.accept("[Mods] " + (done * 100 / total) + "% …");
         });
-        log.accept("[Mods] ✓ Installed: " + fileName);
+        log.accept("[Mods] ✓ Installed Fabric mod: " + fileName);
     }
 
     // ── Mod loader detection ──────────────────────────────────────────────────
 
+    /**
+     * Returns a human-readable label for the currently active mod loader,
+     * or "Vanilla" if none is installed.
+     *
+     * Priority: reads loader.txt (set by ModLoaderInstaller) first, then falls
+     * back to heuristic file-system detection for older installs.
+     */
     public static String getModLoaderLabel() {
+        // Primary: check the persisted loader selection
+        try {
+            com.launcher.install.ModLoaderInstaller.Loader selected =
+                com.launcher.install.ModLoaderInstaller.getSelectedLoader();
+            switch (selected) {
+                case FABRIC:   return "Fabric";
+                case QUILT:    return "Quilt";
+                case FORGE:    return "Forge";
+                case NEOFORGE: return "NeoForge";
+                case OPTIFINE: return "OptiFine";
+                default:       break; // NONE — fall through to heuristic
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback: heuristic detection via version-dir file names
         Path versionDir = Constants.VERSIONS_DIR.resolve(Constants.MINECRAFT_VERSION);
         if (hasFile(versionDir, "fabric-loader"))  return "Fabric";
-        if (hasFile(versionDir, "forge"))           return "Forge";
-        if (hasFile(versionDir, "quilt-loader"))    return "Quilt";
-        if (hasFile(Constants.modsDir(), "fabric"))  return "Fabric (mods present)";
+        if (hasFile(versionDir, "quilt-loader"))   return "Quilt";
+        if (hasFile(versionDir, "neoforge"))       return "NeoForge";
+        if (hasFile(versionDir, "forge"))          return "Forge";
+        if (hasFile(versionDir, "optifine"))       return "OptiFine";
+
+        // Last resort: presence of modloader jars in the mods folder
+        if (hasFile(Constants.modsDir(), "fabric"))   return "Fabric (mods present)";
+        if (hasFile(Constants.modsDir(), "quilt"))    return "Quilt (mods present)";
+        if (hasFile(Constants.modsDir(), "neoforge")) return "NeoForge (mods present)";
+        if (hasFile(Constants.modsDir(), "forge"))    return "Forge (mods present)";
+
         return "Vanilla";
     }
 
