@@ -179,20 +179,25 @@ public class GameLauncher {
         return cp;
     }
 
-    /** Extracts "group/artifact" key from a Maven repo path like "org/ow2/asm/asm/9.9/asm-9.9.jar" */
+    /** Extracts "group:artifact" key from a Maven repo path like "org/ow2/asm/asm/9.9/asm-9.9.jar" */
     private String mavenPathToGA(String path) {
         try {
             // path = group/parts.../artifact/version/artifact-version.jar
-            // split on / and take all but last two segments (version dir + jar file)
+            // e.g. org/ow2/asm/asm/9.9/asm-9.9.jar → parts[-3] is artifact, [0..-3] is group
             String[] parts = path.split("/");
             if (parts.length < 3) return null;
-            // group = parts[0..n-3], artifact = parts[n-2]
-            StringBuilder sb = new StringBuilder();
+            // artifact = parts[length-2], group = parts[0..length-3] joined with dots
+            String artifact = parts[parts.length - 2];
+            StringBuilder group = new StringBuilder();
             for (int i = 0; i < parts.length - 2; i++) {
-                if (i > 0) sb.append('/');
-                sb.append(parts[i]);
+                if (i > 0) group.append('.');
+                group.append(parts[i]);
             }
-            return sb.toString();
+            // Strip the artifact name from the end of the group (Maven path repeats it)
+            // e.g. group built = "org.ow2.asm.asm", artifact = "asm" → real group = "org.ow2.asm"
+            String g = group.toString();
+            if (g.endsWith("." + artifact)) g = g.substring(0, g.length() - artifact.length() - 1);
+            return g + ":" + artifact;
         } catch (Exception e) { return null; }
     }
 
