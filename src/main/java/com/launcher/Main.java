@@ -6,6 +6,7 @@ import com.launcher.download.MinecraftDownloader;
 import com.launcher.install.ModLoaderInstaller;
 import com.launcher.install.ModLoaderInstaller.Loader;
 import com.launcher.mods.ModManager;
+import com.launcher.launch.GameLauncher;
 
 import java.util.List;
 import java.util.function.Consumer;
