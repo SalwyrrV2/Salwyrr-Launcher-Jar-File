@@ -26,13 +26,44 @@
    cd Salwyrr Launcher JAR
    mvn package -q
    ```
-   Maven shade-plugin + antrun copies `launcher.jar` into `../extracted-source/libraries/java/`.
+   Maven shade-plugin produces `target/launcher.jar`. Copy it into
+   `../extracted-source/libraries/java/launcher.jar` (the antrun auto-copy
+   mentioned in older docs was never implemented — copy it manually, or let
+   the Electron CI build it from source).
 
 3. Run:
    ```bash
    cd extracted-source
    npm install && npm start
    ```
+
+## CLI contract (headless mode)
+
+The Electron launcher spawns:
+
+```
+java -jar launcher.jar --headless --version <id> --username <name> --uuid <uuid> \
+     --token <token> --usertype <msa|legacy> --ram <mb> [--data-dir <dir>] \
+     [--server <host:port>]
+```
+
+- `--data-dir` overrides the game directory (used for a custom
+  `launcher.dataDirectory` setting). Defaults to the OS path below.
+- `--server <host:port>` enables direct server connect on launch.
+
+### stdout protocol
+
+All progress/status output is printed to stdout, prefixed:
+
+| Prefix                 | Meaning                                  |
+|------------------------|------------------------------------------|
+| `[Salwyrr Launcher JAR]` | Human-readable log line                |
+| `[PROGRESS] <0-100>`     | Overall download/launch progress        |
+| `[MC] <line>`            | Minecraft's own stdout line             |
+| `[EXIT] <code>`          | Game process exited with this code      |
+
+Errors go to stderr as `[ERROR] <message>` (plus a stack trace) before
+`System.exit(1)`.
 
 ## Data directory
 

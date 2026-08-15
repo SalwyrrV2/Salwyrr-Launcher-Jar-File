@@ -1,9 +1,9 @@
 package com.launcher;
 
-import com.launcher.auth.AuthManager;
 import com.launcher.auth.AuthManager.AuthResult;
 import com.launcher.download.MinecraftDownloader;
 import com.launcher.launch.GameLauncher;
+import com.launcher.ui.LauncherFrame;
 
 public class Main {
 
@@ -16,6 +16,7 @@ public class Main {
         String token       = null;
         String userType    = null;
         String serverArg   = null;
+        String dataDir     = null;
         int    ram         = 2048;
         boolean headless   = false;
 
@@ -27,10 +28,14 @@ public class Main {
                 case "--token":    if (i+1 < args.length) token     = args[++i]; break;
                 case "--usertype": if (i+1 < args.length) userType  = args[++i]; break;
                 case "--server":   if (i+1 < args.length) serverArg = args[++i]; break;
+                case "--data-dir": if (i+1 < args.length) dataDir   = args[++i]; break;
                 case "--ram":      if (i+1 < args.length) { try { ram = Integer.parseInt(args[++i]); } catch (Exception ignored) {} } break;
                 case "--headless": headless = true; break;
             }
         }
+
+        // Honour a custom data directory (Electron's launcher.dataDirectory setting).
+        Constants.setDataDir(dataDir);
 
         if (version != null) {
             Constants.MINECRAFT_VERSION = version;
@@ -42,9 +47,8 @@ public class Main {
             return;
         }
 
-        // Headless flag is required; refuse to start without it
-        System.err.println("[ERROR] --headless and --username are required.");
-        System.exit(1);
+        // Without --headless, open the standalone Swing GUI (java -jar launcher.jar).
+        LauncherFrame.launch();
     }
 
     // ── Headless mode — used by the Electron launcher ─────────────────────────

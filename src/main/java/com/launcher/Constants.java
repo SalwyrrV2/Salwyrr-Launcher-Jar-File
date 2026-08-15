@@ -25,26 +25,54 @@ public class Constants {
     //    Windows : %APPDATA%\.Salwyrr
     //    macOS   : ~/Library/Application Support/Salwyrr
     //    Linux   : ~/.Salwyrr
-    public static final Path GAME_DIR = Paths.get(
-        isWindows() ? System.getenv("APPDATA")
-                    : System.getProperty("user.home"),
-        isWindows() ? ".Salwyrr"
-                    : isMac() ? "Library/Application Support/Salwyrr"
-                              : ".Salwyrr"
-    );
+    //    Overridable at runtime via --data-dir (setDataDir).
+    public static Path GAME_DIR = defaultGameDir();
 
     // ── Shared (not per-version) directories ──────────────────────────────────
-    public static final Path VERSIONS_DIR  = GAME_DIR.resolve("versions");
-    public static final Path LIBRARIES_DIR = GAME_DIR.resolve("libraries");
-    public static final Path ASSETS_DIR    = GAME_DIR.resolve("assets");
-    public static final Path NATIVES_DIR   = GAME_DIR.resolve("natives");
-    public static final Path JAVA_DIR      = GAME_DIR.resolve("java");
-    public static final Path PREFS_FILE    = GAME_DIR.resolve("launcher.properties");
+    public static Path VERSIONS_DIR  = GAME_DIR.resolve("versions");
+    public static Path LIBRARIES_DIR = GAME_DIR.resolve("libraries");
+    public static Path ASSETS_DIR    = GAME_DIR.resolve("assets");
+    public static Path NATIVES_DIR   = GAME_DIR.resolve("natives");
+    public static Path JAVA_DIR      = GAME_DIR.resolve("java");
+    public static Path PREFS_FILE    = GAME_DIR.resolve("launcher.properties");
 
     // ── Instances directory root — each version gets its own sub-folder ───────
     //    e.g. .Salwyrr/instances/1.21.6/mods
     //         .Salwyrr/instances/26.1/resourcepacks
-    public static final Path INSTANCES_DIR = GAME_DIR.resolve("instances");
+    public static Path INSTANCES_DIR = GAME_DIR.resolve("instances");
+
+    /**
+     * Default game directory, derived from the OS. Falls back to the user's
+     * home directory on Windows when %APPDATA% is unset (server/CI runs).
+     */
+    private static Path defaultGameDir() {
+        if (isWindows()) {
+            String appData = System.getenv("APPDATA");
+            if (appData == null || appData.isEmpty())
+                appData = System.getProperty("user.home");
+            return Paths.get(appData, ".Salwyrr");
+        }
+        if (isMac())
+            return Paths.get(System.getProperty("user.home"),
+                             "Library/Application Support/Salwyrr");
+        return Paths.get(System.getProperty("user.home"), ".Salwyrr");
+    }
+
+    /**
+     * Override the game directory. Called with the Electron launcher's data
+     * directory via the {@code --data-dir} CLI argument so that a custom
+     * {@code launcher.dataDirectory} setting is honoured.
+     */
+    public static void setDataDir(String dir) {
+        GAME_DIR = (dir == null || dir.isEmpty()) ? defaultGameDir() : Paths.get(dir);
+        VERSIONS_DIR  = GAME_DIR.resolve("versions");
+        LIBRARIES_DIR = GAME_DIR.resolve("libraries");
+        ASSETS_DIR    = GAME_DIR.resolve("assets");
+        NATIVES_DIR   = GAME_DIR.resolve("natives");
+        JAVA_DIR      = GAME_DIR.resolve("java");
+        PREFS_FILE    = GAME_DIR.resolve("launcher.properties");
+        INSTANCES_DIR = GAME_DIR.resolve("instances");
+    }
 
     // ── Per-version accessors (depend on MINECRAFT_VERSION) ───────────────────
     public static Path instanceDir() {
@@ -78,22 +106,6 @@ public class Constants {
     public static Path crashReportsDir() {
         return instanceDir().resolve("crash-reports");
     }
-
-    // ── Legacy static fields kept for any code that still references them ─────
-    /** @deprecated Use {@link #modsDir()} instead. */
-    @Deprecated public static Path MODS_DIR          = modsDir();
-    /** @deprecated Use {@link #resourcePacksDir()} instead. */
-    @Deprecated public static Path RESOURCEPACKS_DIR = resourcePacksDir();
-    /** @deprecated Use {@link #shaderPacksDir()} instead. */
-    @Deprecated public static Path SHADERPACKS_DIR   = shaderPacksDir();
-    /** @deprecated Use {@link #screenshotsDir()} instead. */
-    @Deprecated public static Path SCREENSHOTS_DIR   = screenshotsDir();
-    /** @deprecated Use {@link #savesDir()} instead. */
-    @Deprecated public static Path SAVES_DIR         = savesDir();
-    /** @deprecated Use {@link #logsDir()} instead. */
-    @Deprecated public static Path LOGS_DIR          = logsDir();
-    /** @deprecated Use {@link #crashReportsDir()} instead. */
-    @Deprecated public static Path CRASH_REPORTS_DIR = crashReportsDir();
 
     // ── Derived paths ─────────────────────────────────────────────────────────
     public static Path versionDir() {
@@ -132,7 +144,6 @@ public class Constants {
     }
 
     public static String nativeClassifier() {
-        String arch = System.getProperty("os.arch", "").contains("64") ? "-64" : "";
         if (isWindows()) return "natives-windows";
         if (isMac())     return "natives-osx";
         return "natives-linux";

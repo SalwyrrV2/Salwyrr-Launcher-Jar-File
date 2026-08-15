@@ -132,7 +132,7 @@ public class MinecraftDownloader {
                 if (p != null) classpath.add(p);
             }
             done++;
-            progress.accept(25 + (int)(40.0 * done / total));
+            progress.accept(25 + (int)(40.0 * done / (total > 0 ? total : 1)));
         }
 
         log.accept("✓ Libraries ready (" + classpath.size() + " jars).");
@@ -317,13 +317,13 @@ public class MinecraftDownloader {
 
     private void ensureDirectories() throws IOException {
         Path[] dirs = {
-            Constants.MODS_DIR,
-            Constants.RESOURCEPACKS_DIR,
-            Constants.SHADERPACKS_DIR,
-            Constants.SCREENSHOTS_DIR,
-            Constants.SAVES_DIR,
-            Constants.LOGS_DIR,
-            Constants.CRASH_REPORTS_DIR,
+            Constants.modsDir(),
+            Constants.resourcePacksDir(),
+            Constants.shaderPacksDir(),
+            Constants.screenshotsDir(),
+            Constants.savesDir(),
+            Constants.logsDir(),
+            Constants.crashReportsDir(),
         };
         for (Path d : dirs) Files.createDirectories(d);
     }

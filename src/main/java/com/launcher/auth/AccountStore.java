@@ -12,7 +12,10 @@ import java.util.*;
  */
 public class AccountStore {
 
-    private static final Path STORE_FILE = Constants.GAME_DIR.resolve("accounts.json");
+    // Resolved lazily so a runtime --data-dir override is honoured.
+    private static Path storeFile() {
+        return Constants.GAME_DIR.resolve("accounts.json");
+    }
 
     public static class Account {
         public final String type;       // "offline" | "microsoft"
@@ -56,8 +59,8 @@ public class AccountStore {
     public static List<Account> load() {
         List<Account> list = new ArrayList<>();
         try {
-            if (!Files.exists(STORE_FILE)) return list;
-            JSONArray arr = new JSONArray(readFile(STORE_FILE));
+            if (!Files.exists(storeFile())) return list;
+            JSONArray arr = new JSONArray(readFile(storeFile()));
             for (int i = 0; i < arr.length(); i++)
                 list.add(new Account(arr.getJSONObject(i)));
         } catch (Exception ignored) {}
@@ -66,10 +69,10 @@ public class AccountStore {
 
     public static void save(List<Account> accounts) {
         try {
-            Files.createDirectories(STORE_FILE.getParent());
+            Files.createDirectories(storeFile().getParent());
             JSONArray arr = new JSONArray();
             for (Account a : accounts) arr.put(a.toJson());
-            Files.write(STORE_FILE, arr.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            Files.write(storeFile(), arr.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         } catch (Exception ignored) {}
     }
 

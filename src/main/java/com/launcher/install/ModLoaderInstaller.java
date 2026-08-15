@@ -198,7 +198,9 @@ public class ModLoaderInstaller {
 
     private static void runForgeInstaller(Path installerJar, Consumer<String> log) throws Exception {
         // Run: java -jar forge-installer.jar --installClient <gameDir>
-        String java = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+        // Use the resolved Minecraft JRE rather than the launcher's own java.home,
+        // which may be an ancient bundled JVM incompatible with modern installers.
+        String java = com.launcher.util.JavaManager.resolveJava(Constants.MINECRAFT_VERSION, log);
         ProcessBuilder pb = new ProcessBuilder(
             java, "-jar", installerJar.toAbsolutePath().toString(),
             "--installClient", Constants.GAME_DIR.toAbsolutePath().toString()
@@ -356,18 +358,24 @@ public class ModLoaderInstaller {
     }
 
     private static String buildOptiFineLoaderJson(String mcVer, Path optifineJar) {
-        // Minimal version JSON that adds OptiFine's tweaker as a game arg
-        // and ensures the OptiFine jar is on the classpath via a local library entry
+        boolean modern = isModernVersion(mcVer);
+
         JSONObject json = new JSONObject();
         json.put("id", "optifine-" + mcVer);
         json.put("type", "release");
-        json.put("mainClass", "net.minecraft.launchwrapper.Launch");
+        // LaunchWrapper was removed in MC 1.13. Modern OptiFine is a plain
+        // jar on the classpath that patches the vanilla client at runtime.
+        json.put("mainClass",
+            modern ? "net.minecraft.client.main.Main"
+                   : "net.minecraft.launchwrapper.Launch");
 
         JSONObject arguments = new JSONObject();
-        JSONArray gameArgs = new JSONArray();
-        gameArgs.put("--tweakClass");
-        gameArgs.put("optifine.OptiFineTweaker");
-        arguments.put("game", gameArgs);
+        if (!modern) {
+            JSONArray gameArgs = new JSONArray();
+            gameArgs.put("--tweakClass");
+            gameArgs.put("optifine.OptiFineTweaker");
+            arguments.put("game", gameArgs);
+        }
         json.put("arguments", arguments);
 
         // Add OptiFine jar as a library with a local file path
@@ -394,6 +402,19 @@ public class ModLoaderInstaller {
         json.put("libraries", libraries);
 
         return json.toString(2);
+    }
+
+    /** True for MC 1.13+ (no LaunchWrapper) — also covers future version families. */
+    private static boolean isModernVersion(String mcVer) {
+        try {
+            String[] parts = mcVer.split("\\.");
+            if (parts.length >= 2 && parts[0].equals("1")) {
+                return Integer.parseInt(parts[1]) >= 13;
+            }
+            return true; // e.g. 26.x — modern format
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     // ── Library downloader (shared) ───────────────────────────────────────────

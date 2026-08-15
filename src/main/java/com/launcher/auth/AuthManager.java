@@ -27,7 +27,10 @@ public class AuthManager {
     private static final String CLIENT_ID   = "00000000402b5328";
     private static final String TOKEN_SCOPE = "service::user.auth.xboxlive.com::MBI_SSL";
 
-    private static final Path TOKEN_CACHE = Constants.GAME_DIR.resolve(".auth_cache.json");
+    // Resolved lazily so a runtime --data-dir override is honoured.
+    private static Path tokenCache() {
+        return Constants.GAME_DIR.resolve(".auth_cache.json");
+    }
 
     // ── Result ─────────────────────────────────────────────────────────────────
 
@@ -138,7 +141,10 @@ public class AuthManager {
         try {
             resp = HttpUtil.postForm("https://login.live.com/oauth20_token.srf", body);
         } catch (IOException e) {
-            return null;
+            // A real network failure must not be treated as "authorization
+            // pending" (which the GUI would otherwise poll for 15 minutes).
+            throw new IOException("Failed to reach the Microsoft login server: "
+                + e.getMessage(), e);
         }
 
         JSONObject json = new JSONObject(resp);
@@ -161,8 +167,8 @@ public class AuthManager {
 
     public static AuthResult trySilentLogin() {
         try {
-            if (!Files.exists(TOKEN_CACHE)) return null;
-            JSONObject cache = new JSONObject(readFile(TOKEN_CACHE));
+            if (!Files.exists(tokenCache())) return null;
+            JSONObject cache = new JSONObject(readFile(tokenCache()));
             String refreshToken = cache.optString("refresh_token", "");
             if (refreshToken.isEmpty()) return null;
 
@@ -187,7 +193,7 @@ public class AuthManager {
     }
 
     public static void logout() {
-        try { Files.deleteIfExists(TOKEN_CACHE); } catch (Exception ignored) {}
+        try { Files.deleteIfExists(tokenCache()); } catch (Exception ignored) {}
     }
 
     // ── Microsoft OAuth chain ─────────────────────────────────────────────────
@@ -257,14 +263,14 @@ public class AuthManager {
                 .put("refresh_token", refreshToken)
                 .put("username",      username)
                 .put("saved_at",      System.currentTimeMillis());
-            Files.write(TOKEN_CACHE, cache.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            Files.write(tokenCache(), cache.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         } catch (Exception ignored) {}
     }
 
     public static String getCachedUsername() {
         try {
-            if (!Files.exists(TOKEN_CACHE)) return null;
-            return new JSONObject(readFile(TOKEN_CACHE)).optString("username", null);
+            if (!Files.exists(tokenCache())) return null;
+            return new JSONObject(readFile(tokenCache())).optString("username", null);
         } catch (Exception e) { return null; }
     }
 

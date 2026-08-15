@@ -45,14 +45,17 @@ Salwyrr Launcher JAR/
 
 ## Building
 
-**Requirements:** Java 17+, Maven 3.8+
+**Requirements:** Java 11+ (build targets Java 11), Maven 3.8+
 
 ```bash
 # From the Salwyrr Launcher JAR directory:
 mvn package -q
 ```
 
-The Maven shade plugin bundles all dependencies into a fat JAR. The antrun plugin then copies `launcher.jar` into `../extracted-source/libraries/java/` automatically.
+The Maven shade plugin bundles all dependencies into a fat JAR at
+`target/launcher.jar`. Copy it into the Electron launcher's
+`libraries/java/launcher.jar` (the Electron CI does this automatically when
+it builds installers).
 
 Expected folder layout:
 
@@ -93,10 +96,15 @@ java -jar target/launcher.jar \
   --username Steve \
   --uuid <uuid> \
   --token <token> \
-  --usertype mojang \
+  --usertype msa \
   --ram 4096 \
   --server play.example.com:25565
 ```
+
+> `--usertype` is `msa` for Microsoft accounts, `legacy` for offline/cracked.
+> Pass `--data-dir <dir>` to override the game directory. All status is
+> emitted on stdout as `[Salwyrr Launcher JAR]`, `[PROGRESS] <pct>`,
+> `[MC]` and `[EXIT] <code>` lines (see INTEGRATION.md).
 
 ---
 

@@ -476,8 +476,8 @@ public class LauncherFrame extends JFrame {
 
         openFolderBtn.addActionListener(e -> {
             try {
-                Files.createDirectories(Constants.MODS_DIR);
-                Desktop.getDesktop().open(Constants.MODS_DIR.toFile());
+                Files.createDirectories(Constants.modsDir());
+                Desktop.getDesktop().open(Constants.modsDir().toFile());
             } catch (Exception ex) { log("Error: " + ex.getMessage()); }
         });
 
@@ -584,7 +584,7 @@ public class LauncherFrame extends JFrame {
         String[][] paths = {
             {"Game Dir",     Constants.GAME_DIR.toString()},
             {"Versions",     Constants.VERSIONS_DIR.toString()},
-            {"Mods",         Constants.MODS_DIR.toString()},
+            {"Mods",         Constants.modsDir().toString()},
             {"Libraries",    Constants.LIBRARIES_DIR.toString()},
         };
         for (int i = 0; i < paths.length; i++) {
@@ -1092,5 +1092,13 @@ public class LauncherFrame extends JFrame {
         g.insets = new Insets(5, 8, 5, 8);
         g.anchor = GridBagConstraints.WEST;
         return g;
+    }
+
+    /**
+     * Launch the standalone Swing GUI on the event-dispatch thread.
+     * Called by {@code Main} when running without --headless.
+     */
+    public static void launch() {
+        javax.swing.SwingUtilities.invokeLater(() -> new LauncherFrame().setVisible(true));
     }
 }

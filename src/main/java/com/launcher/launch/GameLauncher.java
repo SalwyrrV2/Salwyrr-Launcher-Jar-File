@@ -356,15 +356,12 @@ public class GameLauncher {
 
     private String assetsIndexId() {
         try {
-            Path indexDir = Constants.ASSETS_DIR.resolve("indexes");
-            if (Files.exists(indexDir)) {
-                Path exact = indexDir.resolve(Constants.MINECRAFT_VERSION + ".json");
-                if (Files.exists(exact)) return Constants.MINECRAFT_VERSION;
-                File[] files = indexDir.toFile().listFiles();
-                if (files != null && files.length > 0)
-                    return files[0].getName().replace(".json", "");
-            }
+            Path exact = Constants.ASSETS_DIR.resolve("indexes")
+                .resolve(Constants.MINECRAFT_VERSION + ".json");
+            if (Files.exists(exact)) return Constants.MINECRAFT_VERSION;
         } catch (Exception ignored) {}
+        // No exact index — falling back to an arbitrary file could pick the
+        // wrong asset set for a shared folder. Use the version id instead.
         return Constants.MINECRAFT_VERSION;
     }
 
